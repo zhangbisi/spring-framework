@@ -34,3 +34,24 @@ You'll notice these files are already intentionally in .gitignore. The same poli
 Q. What about IntelliJ IDEA's own [Gradle support](http://confluence.jetbrains.net/display/IDEADEV/Gradle+integration)?
 
 A. Keep an eye on http://youtrack.jetbrains.com/issue/IDEA-53476
+
+
+## 导入idae 的步骤：
+一、准备环境：
+1、JDK：安装好JDK1.8
+2、安装 Gradle 
+
+二、源码编译
+3、先进入 …/spring-framework 目录，执行 ./gradlew :spring-oxm:compileTestJava  先对 Spring-oxm 模块进行预编译。
+4、 spring-core需要依賴日志包 commons-logging-1.2.jar,添加本地依赖,在spring-core.gradle文件中 dependencies {} 内添加：
+项目的根目录中创建libs 目录，把依赖包放到这个目录下
+```
+dependencies {
+    .....
+    //添加本地依赖包
+   compile fileTree(dir:'libs',includes:['*jar'])
+}
+```
+5、手动构建cglibRepack.jar 和 objenesisRepackJar
+
+6、缺少包直接添加到spring-zwisdom 的xml中
