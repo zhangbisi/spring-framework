@@ -18,6 +18,8 @@ dependencies {
 
     compile(project(":spring-aop"))
     compile(project(":spring-beans"))
+    compile(project(":spring-jdbc"))
+    compile(project(":spring-aspects"))
     compile(project(":spring-context"))
     compile(project(":spring-core"))
     compile(project(":spring-expression"))
@@ -25,5 +27,6 @@ dependencies {
     compile(project(":spring-webmvc"))
     optional(project(":spring-context-support"))  // for FreeMarker support
     optional(project(":spring-oxm"))
+
 
 }

@@ -22,7 +22,7 @@ import org.springframework.lang.Nullable;
 
 /**
  * Interface to be implemented by objects that define a mapping between
- * requests and handler objects.
+ * requests and handler objects. 根据request找到相应的 handler 和 Interceptors
  *
  * <p>This class can be implemented by application developers, although this is not
  * necessary, as {@link org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping}

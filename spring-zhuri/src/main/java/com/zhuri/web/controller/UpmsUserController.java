@@ -4,7 +4,8 @@ import com.zhuri.web.dao.entity.UpmsUser;
 import com.zhuri.web.service.UpmsUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import org.apache.commons.logging.Log;
+import org.springframework.web.servlet.ModelAndView;
+
 /**
  * @author :
  * @create : 2019-08-17 18:33
@@ -25,15 +26,21 @@ public class UpmsUserController {
     }
 
 
-    @RequestMapping(value = "/create", method = RequestMethod.GET)
-    public String create() {
+	@PostMapping(value = "/create")
+    public String create(@RequestBody UpmsUser upmsUser) {
+		System.out.println("添加用户数据upmsUser="+upmsUser.toString());
         return "/manage/user/create.jsp";
     }
 
     @GetMapping(value = "getById")
     public String getByByPrimaryKey(@RequestParam("id")int id){
-		UpmsUser user = upmsUserService.selectByPrimaryKey(id);
+		UpmsUser user = new UpmsUser();//upmsUserService.selectByPrimaryKey(id);
         return user.toString();
     }
+	@GetMapping(value = "getUserList")
+    public ModelAndView getUserListView(){
+		ModelAndView model = new ModelAndView("/user/index.jsp");
+		return model;
+	}
 
 }
