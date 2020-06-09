@@ -1,6 +1,7 @@
 package com.zhuri.annotation.upms.config;
 
 
+import com.zhuri.annotation.upms.bean.lifecycle.LifecycleBeanAware;
 import com.zhuri.annotation.upms.bean.lifecycle.UpmsRole;
 import com.zhuri.annotation.upms.bean.lifecycle.UpmsUser;
 import com.zhuri.annotation.upms.bean.lifecycle.UpmsUserRole;
@@ -91,6 +92,12 @@ public class LifeCycleConfig {
     public MyBeanPostProcessor myBeanPostProcessor(){
         return new MyBeanPostProcessor();
     }
+
+
+    @Bean
+    public LifecycleBeanAware lifecycleBeanAware(){
+    	return new LifecycleBeanAware();
+	}
 
     public static void main(String[] args) {
         ApplicationContext applicationContext = new AnnotationConfigApplicationContext(LifeCycleConfig.class);

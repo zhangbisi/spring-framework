@@ -52,8 +52,16 @@ import org.springframework.util.Assert;
  */
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
 
+	/**
+	 * 顾名思义，这个类是个读取器，读取一个被加了注解的bean
+	 * 这个类在构造方法中被实例化
+	 */
 	private final AnnotatedBeanDefinitionReader reader;
 
+	/**
+	 * 扫描器，扫描所有加了注解的bean
+	 * 同样在构造器中被实例化
+	 */
 	private final ClassPathBeanDefinitionScanner scanner;
 
 

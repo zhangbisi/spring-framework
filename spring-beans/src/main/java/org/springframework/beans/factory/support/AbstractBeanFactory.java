@@ -240,10 +240,26 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
 		final String beanName = transformedBeanName(name);
+		//定义了一个对象，用来存将来返回出来的bean
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
+		/**
+		 * 注意这是第一次调用getSingleton方法，下面spring还会调用一次
+		 *
+		 */
 		Object sharedInstance = getSingleton(beanName);
+		/**
+		 * 如果sharedInstance不等于空直接返回
+		 * 当然这里没有直接返回而是调用了getObjectForBeanInstance
+		 * 关于这方法以后解释，读者可以认为这里可以理解为
+		 * bean =sharedInstance; 然后方法最下面会返回bean
+		 * 什么时候不等于空？
+		 * 再容器初始化完成之后
+		 * 程序员直接调用getbean的时候不等于空
+		 * 什么时候等于空？
+		 * 上文已经解释过了，创建对象的时候调用就会等于空
+		 */
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {

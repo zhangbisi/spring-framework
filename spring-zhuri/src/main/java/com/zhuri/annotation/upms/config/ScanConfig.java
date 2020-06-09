@@ -24,7 +24,11 @@ public class ScanConfig {
     }
 
     public static void main(String[] args) {
-        ApplicationContext applicationContext = new AnnotationConfigApplicationContext(ScanConfig.class);
+
+		/**
+		 * 第二种写法
+		 */
+		ApplicationContext applicationContext = new AnnotationConfigApplicationContext(ScanConfig.class);
         UpmsLogController upmsLogController= applicationContext.getBean(UpmsLogController.class);
         System.out.println(upmsLogController.toString());
     }
