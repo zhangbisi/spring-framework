@@ -219,12 +219,35 @@ public class AnnotatedBeanDefinitionReader {
 		}
 
 		abd.setInstanceSupplier(instanceSupplier);
+		//bean的作用域，解析注解Bean 定义的作用域，若@Scope("prototype")，则Bean 为原型类型； 若@Scope("singleton")，则Bean 为单态类型
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+		//为注解Bean 定义设置作用域
 		abd.setScope(scopeMetadata.getScopeName());
+		//为注解Bean 定义设置bean名称
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
-
+		/**
+		 * 处理注解Bean 定义中的通用注解 Lazy  Primary  DependsOn  Role Description
+		 * 1、 @Lazy  注解可以将Bean对象的创建延迟到第一次使用Bean的时候
+		 *
+		 * 2、 @Primary 优先方案，被注解的实现，优先被注入
+		 *  对比 @Qualifier	先声明后使用，相当于多个实现起多个不同的名字，注入时候告诉我你要注入哪个，和@Autowired一起使用
+		 *
+		 * 3、@DependsOn
+		 * 首先要了解depends-on或@DependsOn作用，是用来表示一个bean A的实例化依赖另一个bean B的实例化， 但是A并不需要持有一个B的对象，
+		 * 如果需要的话就不用depends-on，直接用依赖注入就可以了或者ref标签。
+		 * 3.1)直接或者间接标注在带有@Component注解的类上面;
+		 * 3.2)直接或者间接标注在带有@Bean 注解的方法上面;
+		 *
+		 *
+		 * 4、@Role
+		 * 5、@Description 已经废弃的注解
+		 *
+		 */
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
 		if (qualifiers != null) {
+			//如果在向容器注册注解Bean 定义时，使用了额外的限定符注解，则解析限定符注解。
+			//主要是配置的关于autowiring 自动依赖注入装配的限定条件，即@Qualifier 注解
+			//Spring 自动依赖注入装配默认是按类型装配，如果使用@Qualifier 则按名称
 			for (Class<? extends Annotation> qualifier : qualifiers) {
 				if (Primary.class == qualifier) {
 					abd.setPrimary(true);
@@ -240,9 +263,11 @@ public class AnnotatedBeanDefinitionReader {
 		for (BeanDefinitionCustomizer customizer : definitionCustomizers) {
 			customizer.customize(abd);
 		}
-
+		//创建一个指定Bean 名称的Bean 定义对象，封装注解Bean 定义类数据
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+		//根据注解Bean 定义类中配置的作用域，创建相应的代理对象
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+		//向IOC 容器注册注解Bean 类定义对象
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 

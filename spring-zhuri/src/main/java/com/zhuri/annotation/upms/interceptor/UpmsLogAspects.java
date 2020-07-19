@@ -19,6 +19,17 @@ import org.aspectj.lang.annotation.Pointcut;
  *      2、定义一个切点  @Pointcut注解 + pointCut()方法
  *      3、JoinPoint joinPoint 获取传入的参数
  *      4、
+ *
+ *
+ *      Aspect 切面
+ *      join Point 连接点
+ *      advice  通知
+ *      pointcut 切点
+ *      target 目标对象
+ *      proxy 代理对象
+ *      weaving 织入
+ *
+ *
  */
 
 @Aspect
@@ -39,8 +50,18 @@ public class UpmsLogAspects {
      * 　　　（*，Integer）匹配一个接受两个参数的方法，第一个可以为任意类型，第二个必须为Integer。
      */
     //定义切点
-    @Pointcut("execution(*  com.zhuri.cn.annotation.upms.service.*.*(..))")
+    @Pointcut("execution(*  com.zhuri.annotation.upms.service.*.*(..))")
     public void aspect(){}
+
+    @Pointcut("args(java.lang.String)")
+    public void pointcutArgs(){
+    	System.out.println("Pointcut  args");
+	}
+
+	@Pointcut("within(java.lang.String)")
+	public void pointcutWithin(){
+		System.out.println("Pointcut  within");
+	}
 
     //前置通知(
     @Before("aspect()")
@@ -59,6 +80,18 @@ public class UpmsLogAspects {
     @AfterReturning(value = "aspect()",returning = "result")
     public void logReturn(JoinPoint joinPoint,Object result){
         System.out.println("捕获目标方法的传入参数 返回的参数 joinPoint = [" + joinPoint.getArgs() + "], result = [" + result + "]");
+		Object[] parames = joinPoint.getArgs();//获取目标方法体参数
+		for (int i = 0; i < parames.length; i++) {
+			System.out.println(parames[i]);
+		}
+		System.out.println(joinPoint.getSignature().getName());
+		//获取目标类名
+		String className = joinPoint.getTarget().getClass().toString();
+		System.out.println("className:" + className);
+		className = className.substring(className.indexOf("com"));
+		//获取目标方法签名
+		String signature = joinPoint.getSignature().toString();
+		System.out.println("signature:" + signature);
     }
 
     //捕获目标方法的传入参数 返回的异常
@@ -66,10 +99,5 @@ public class UpmsLogAspects {
     public void logException(JoinPoint joinPoint,Exception exception){
         System.out.println("异常信息,joinPoint = [" + joinPoint.getArgs() + "], exception = [" + exception + "]");
     }
-
-   /* @Around(value = "aspect()")
-    public void round(){
-
-    }*/
 
 }

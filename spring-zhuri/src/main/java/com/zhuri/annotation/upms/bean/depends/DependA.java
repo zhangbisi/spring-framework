@@ -13,4 +13,8 @@ import org.springframework.stereotype.Component;
 public class DependA {
 	@Autowired
 	DependB dependB;
+
+	public DependA() {
+		System.out.println("DependA 构造方法。。。。。");
+	}
 }

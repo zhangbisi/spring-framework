@@ -11,19 +11,19 @@ import org.springframework.stereotype.Component;
  *
  *
  */
-@Component
+//@Component
 public class MyBeanPostProcessor implements BeanPostProcessor {
 
     public MyBeanPostProcessor() {
         System.out.println();
-        System.out.println("MyBeanPostProcessor 构造器初始化。。。。。。。。。。。。。。。。");
+        System.out.println(MyBeanPostProcessor.class.getName() +"第一步优先调用构造器初始化。。。。。。。。。。。。。。。。");
         System.out.println();
     }
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         System.out.println();
-        System.out.println("postProcessBeforeInitialization..."+beanName+"=========="+bean);
+        System.out.println(MyBeanPostProcessor.class.getName()+"第二步初始化之前...");
         System.out.println();
         return bean;
     }
@@ -31,7 +31,7 @@ public class MyBeanPostProcessor implements BeanPostProcessor {
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         System.out.println();
-        System.out.println("postProcessAfterInitialization..."+beanName+"==========="+bean);
+        System.out.println(MyBeanPostProcessor.class.getName()+"第三步初始化之后...");
         System.out.println();
         return bean;
     }

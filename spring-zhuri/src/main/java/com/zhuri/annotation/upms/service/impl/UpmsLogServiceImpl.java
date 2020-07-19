@@ -2,6 +2,7 @@ package com.zhuri.annotation.upms.service.impl;
 
 
 import com.zhuri.annotation.jdbc.UpmsLogRowMapper;
+import com.zhuri.annotation.upms.customannotation.RedisCache;
 import com.zhuri.annotation.upms.dao.model.UpmsLog;
 import com.zhuri.annotation.upms.service.UpmsLogService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ public class UpmsLogServiceImpl implements UpmsLogService {
 	//private UpmsLogMapper upmsLogMapper;
 
     @Override
+	@RedisCache(cacheKey = "select",expireTime = 10)
     public UpmsLog selectByPrimaryKey(String id) {
         return new UpmsLog();
     }

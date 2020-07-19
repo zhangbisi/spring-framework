@@ -510,7 +510,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	}
 
 
-	/**
+	/**这个方法的执行时机是什么时候？
 	 * Overridden method of {@link HttpServletBean}, invoked after any bean properties
 	 * have been set. Creates this servlet's WebApplicationContext.
 	 */

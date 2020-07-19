@@ -58,13 +58,14 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @Configuration
 //开启基于注解的aop
 @EnableAspectJAutoProxy
-@ComponentScan(value = "com.zhuri.annotation.upms.service")
+@ComponentScan(value = {"com.zhuri.annotation.upms.service","com.zhuri.annotation.upms.util"})
 public class AopConfig {
     //切面类加入容器
     @Bean
     public UpmsLogAspects upmsLogAspects(){
         return new UpmsLogAspects();
     }
+
    /*
     @Bean
     public JdbcTemplate jdbcTemplate(){

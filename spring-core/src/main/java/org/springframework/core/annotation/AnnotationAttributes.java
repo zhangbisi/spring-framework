@@ -36,6 +36,8 @@ import org.springframework.util.StringUtils;
  * code as well as convenience methods for looking up annotation attributes
  * in a type-safe fashion.
  *
+ * AnnotationAttributes可以更好的对Map进行封装处理，对注解的解析之后,需要对注解的信息进行对象存储转换
+ *
  * @author Chris Beams
  * @author Sam Brannen
  * @author Juergen Hoeller

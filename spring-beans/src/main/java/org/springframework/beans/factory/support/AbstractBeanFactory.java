@@ -163,6 +163,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	@Nullable
 	private SecurityContextProvider securityContextProvider;
 
+	/** 合并 RootBeanDefinition ；xml中，配置了 parent属性需要合并；详细parent怎么使用，看文末总结部分    */
 	/** Map from bean name to merged RootBeanDefinition. */
 	private final Map<String, RootBeanDefinition> mergedBeanDefinitions = new ConcurrentHashMap<>(256);
 
@@ -239,6 +240,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
+		/**
+		 * 通过 name 获取 beanName。这里不使用 name 直接作为 beanName 有两个原因
+		 * 1、name 可能会以 & 字符开头，表明调用者想获取 FactoryBean 本身，而非 FactoryBean实现类所创建的 bean。
+		 *	在 BeanFactory 中，FactoryBean 的实现类和其他的 bean 存储方式是一致的，即 <beanName, bean>
+		 *	beanName 中是没有 & 这个字符的。所以我们需要将 name 的首字符 & 移除，这样才能从缓存里取到 FactoryBean 实例。
+		 * 2、还是别名的问题，转换需要
+		 */
 		final String beanName = transformedBeanName(name);
 		//定义了一个对象，用来存将来返回出来的bean
 		Object bean;
@@ -274,6 +282,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 
 		else {
+			/**
+			 * 判断这个类是不是在创建过程中
+			 * 上文说了，一个类是否在创建的过程中是第二次调用getSingleton中决定的
+			 * 这里还没有执行到，如果就在创建过程中则出异常
+			 */
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
 			if (isPrototypeCurrentlyInCreation(beanName)) {
@@ -310,6 +323,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
 
+				//TODO [笔记]什么时候回有值呢
 				// Guarantee initialization of beans that the current bean depends on.
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
@@ -329,10 +343,14 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					}
 				}
 
+				/**
+				 * 第二次调用getSingleton
+				 */
 				// Create bean instance.
 				if (mbd.isSingleton()) {
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
+							//完成目标对象的创建 如果需要代理还完成了代理
 							return createBean(beanName, mbd, args);
 						}
 						catch (BeansException ex) {

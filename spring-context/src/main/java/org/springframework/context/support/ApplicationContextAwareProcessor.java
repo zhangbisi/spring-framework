@@ -121,7 +121,7 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 			}
 		}
 	}
-
+	//todo 什么都没有做 为什么还要有这个方法  这个方法是否没必要存在
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) {
 		return bean;

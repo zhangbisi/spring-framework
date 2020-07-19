@@ -473,6 +473,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			mbdToUse.setBeanClass(resolvedClass);
 		}
 
+		// 处理 lookup-method 和 replace-method 配置，Spring 将这两个配置统称为 override method
 		// Prepare method overrides.
 		try {
 			mbdToUse.prepareMethodOverrides();
@@ -483,6 +484,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
+			//第一次调用后置处理器--aop
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
@@ -532,11 +534,26 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Instantiate the bean.
 		BeanWrapper instanceWrapper = null;
 		if (mbd.isSingleton()) {
+			//如果你bean指定需要通过factoryMethod来创建则会在这里被创建
+			//如果读者不知道上面factoryMethod那你就忽略这行代码,你可以认为你的A是一个普通类，不会再这里创建
+			// com.zhuri.annotation.upms.bean.factory.UpmsSustem需要通过
+			// com.zhuri.annotation.upms.bean.factory.UpmsSystemFactory.getObject创建
 			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
 		}
 		if (instanceWrapper == null) {
+			/**
+			 * 创建 bean 实例，并将实例包裹在 BeanWrapper 实现类对象中返回。
+			 * createBeanInstance中包含三种创建 bean 实例的方式：
+			 *   1. 通过工厂方法创建 bean 实例
+			 *   2. 通过构造方法自动注入（autowire by constructor）的方式创建 bean 实例
+			 *   3. 通过无参构造方法方法创建 bean 实例
+			 *
+			 * 若 bean 的配置信息中配置了 lookup-method 和 replace-method，则会使用 CGLIB
+			 * 增强 bean 实例。关于lookup-method和replace-method后面再说。
+			 */
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
+		//得到new出来的A，为什么需要得到呢？因为Anew出来之后存到一个对象的属性当中
 		final Object bean = instanceWrapper.getWrappedInstance();
 		Class<?> beanType = instanceWrapper.getWrappedClass();
 		if (beanType != NullBean.class) {
@@ -557,21 +574,43 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		//重点:面试会考
+		//这里就是判断是不是支持循环引用和是否单例以及bean是否在创建过程中
+		//判断循环引用的是&& this.allowCircularReferences
+		//allowCircularReferences在spring源码当中默认就是true
+		// private boolean allowCircularReferences = true; 这是spring源码中的定义
+		//并且这个属性上面spring写了一行非常重要的注释
+		// Whether to automatically try to resolve circular references between beans
+		// 读者自行翻译，这是支持spring默认循环引用最核心的证据
+		//读者一定要讲给面试官，关于怎么讲，我后面会总结
 		// Eagerly cache singletons to be able to resolve circular references
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
 				isSingletonCurrentlyInCreation(beanName));
+		//如果是单例，并且正在创建，并且是没有关闭循环引用则执行
+		//所以spring原形是不支持循环引用的这是证据，但是其实可以解决
+		//怎么解决原形的循环依赖，笔者下次更新吧
 		if (earlySingletonExposure) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
+			//这里就是这个创建出来的A 对象a 放到第二个map当中
+			//注意这里addSingletonFactory就是往map当中put
+			//需要说明的是他的value并不是一个a对象
+			//而是一段表达式，但是包含了这个对象的
+			//所以上文说的第二个map和第三个map的有点不同
+			//第三个map是直接放的a对象(下文会讲到第三个map的)，
+			//第二个放的是一个表达式包含了a对象
+			//为什么需要放一个表达式？下文分析吧
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
 		// Initialize the bean instance.
 		Object exposedObject = bean;
 		try {
+			//填充属性，非常重要。也就是所谓的自动注入，循环依赖的属性的处理
+			//这个代码我同一张图来说明
 			populateBean(beanName, mbd, instanceWrapper);
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
@@ -914,6 +953,52 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		return (objectType.value != null && Object.class != objectType.value ? objectType.value : null);
 	}
 
+
+/**
+这个方法内容比较少，但是很复杂，因为是对后置处理器的调用
+关于后置处理器笔者其实要说话很多很多
+现在市面上可见的资料或者书籍对后置处理器的说法笔者一般都不苟同
+我在B站上传过一个4个小时的视频，其中对spring后置处理器做了详细的分析
+也提出了一些自己的理解和主流理解不同的地方，有兴趣同学可以去看看
+其实简单说--这个方法作用主要是为了来处理aop的；
+当然还有其他功能，但是一般的读者最熟悉的就是aop
+这里我说明一下，aop的原理或者流程有很多书籍说到过
+但是笔者今天亲测了，现在市面可见的资料和书籍对aop的说法都不全
+很多资料提到aop是在spring bean的生命周期里面填充属性之后的代理周期完成的
+而这个代理周期甚至是在执行生命周期回调方法之后的一个周期
+那么问题来了？什么叫spring生命周期回调方法周期呢？
+ 首先spring bean生命周期和spring生命周期回调方法周期是两个概念
+spring生命周期回调方法是spring bean生命周期的一部分、或者说一个周期
+简单理解就是spring bean的生命的某个过程会去执行spring的生命周期的回调方法
+比如你在某个bean的方法上面写一个加@PostConstruct的方法（一般称bean初始化方法）
+那么这个方法会在spring实例化一个对象之后，填充属性之后执行这个加注解的方法
+我这里叫做spring 生命周期回调方法的生命周期，不是我胡说，有官方文档可以参考的
+在执行完spring生命周期回调方法的生命周期之后才会执行代理生命周期
+在代理这个生命周期当中如果有需要会完成aop的功能
+以上是现在主流的说法，也是一般书籍或者“某些大师”的说法
+但是在循环引用的时候就不一样了，循环引用的情况下这个周期这里就完成了aop的代理
+这个周期严格意义上是在填充属性之前（填充属性也是一个生命周期阶段）
+填充属性的周期甚至在生命周期回调方法之前，更在代理这个周期之前了
+简单来说主流说法代理的生命周期比如在第8个周期或者第八步吧
+但是笔者这里得出的结论，如果一个bean是循环引用的则代理的周期可能在第3步就完成了
+那么为什么需要在第三步就完成呢？
+试想一下A、B两个类，现在对A类做aop处理，也就是需要对A代理
+不考虑循环引用 spring 先实例化A，然后走生命周期确实在第8个周期完成的代理
+关于这个结论可以去看b站我讲的spring aop源码分析
+但是如果是循环依赖就会有问题
+比如spring 实例化A 然后发现需要注入B这个时候A还没有走到8步
+还没有完成代理，发觉需要注入B，便去创建B，创建B的时候
+发觉需要注入A，于是创建A，创建的过程中通过getSingleton
+得到了a对象，注意是对象，一个没有完成代理的对象
+然后把这个a注入给B？这样做合适吗？注入的a根本没有aop功能；显然不合适
+		因为b中注入的a需要是一个代理对象
+而这个时候a存在第二个map中；不是一个代理对象；
+于是我在第二个map中就不能单纯的存一个对象，需要存一个工厂
+这个工厂在特殊的时候需要对a对象做改变，比如这里说的代理（需要aop功能的情况）
+这也是三个map存在的必要性，不知道读者能不能get到点
+
+*/
+
 	/**
 	 * Obtain a reference for early access to the specified bean,
 	 * typically for the purpose of resolving a circular reference.
@@ -1113,6 +1198,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Make sure bean class is actually resolved at this point.
 		Class<?> beanClass = resolveBeanClass(mbd, beanName);
 
+		/**
+		 * 检测一个类的访问权限spring默认情况下对于非public的类是允许访问的。
+		 */
 		if (beanClass != null && !Modifier.isPublic(beanClass.getModifiers()) && !mbd.isNonPublicAccessAllowed()) {
 			throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 					"Bean class isn't public, and non-public access not allowed: " + beanClass.getName());
@@ -1123,10 +1211,24 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
 
+		/**
+		 *
+		 * 如果工厂方法不为空，则通过工厂方法构建 bean 对象
+		 * 这种构建 bean 的方式可以自己写个demo去试试
+		 * 源码就不做深入分析了，有兴趣的同学可以和我私下讨论
+		 */
 		if (mbd.getFactoryMethodName() != null) {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
 
+		/**
+		 * 从spring的原始注释可以知道这个是一个Shortcut，什么意思呢？
+		 * 当多次构建同一个 bean 时，可以使用这个Shortcut，
+		 * 也就是说不在需要次推断应该使用哪种方式构造bean
+		 *  比如在多次构建同一个prototype类型的 bean 时，就可以走此处的hortcut
+		 * 这里的 resolved 和 mbd.constructorArgumentsResolved 将会在 bean 第一次实例
+		 * 化的过程中被设置，后面来证明
+		 */
 		// Shortcut when re-creating the same bean...
 		boolean resolved = false;
 		boolean autowireNecessary = false;
@@ -1134,19 +1236,23 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			synchronized (mbd.constructorArgumentLock) {
 				if (mbd.resolvedConstructorOrFactoryMethod != null) {
 					resolved = true;
+					//如果已经解析了构造方法的参数，则必须要通过一个带参构造方法来实例
 					autowireNecessary = mbd.constructorArgumentsResolved;
 				}
 			}
 		}
 		if (resolved) {
 			if (autowireNecessary) {
+				// 通过构造方法自动装配的方式构造 bean 对象
 				return autowireConstructor(beanName, mbd, null, null);
 			}
 			else {
+				//通过默认的无参构造方法进行
 				return instantiateBean(beanName, mbd);
 			}
 		}
 
+		//由后置处理器决定返回哪些构造方法,第二次调用后置处理器推断构造器方法
 		// Candidate constructors for autowiring?
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
@@ -1160,6 +1266,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return autowireConstructor(beanName, mbd, ctors, null);
 		}
 
+		//使用默认的无参构造方法进行初始化
 		// No special handling: simply use no-arg constructor.
 		return instantiateBean(beanName, mbd);
 	}
@@ -1375,6 +1482,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
+					//处理DependA 依赖 DependB 循环依赖
 					PropertyValues pvsToUse = ibp.postProcessProperties(pvs, bw.getWrappedInstance(), beanName);
 					if (pvsToUse == null) {
 						if (filteredPds == null) {

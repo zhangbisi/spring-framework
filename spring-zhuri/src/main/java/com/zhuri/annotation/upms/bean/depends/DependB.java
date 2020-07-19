@@ -16,7 +16,7 @@ public class DependB {
 	DependA dependA;
 
 	public DependB(){
-		System.out.println("构造方法。。。。。。。");
+		System.out.println("DependB构造方法。。。。。。。");
 	}
 
 	/**

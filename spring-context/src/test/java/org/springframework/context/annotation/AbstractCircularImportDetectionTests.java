@@ -19,6 +19,10 @@ package org.springframework.context.annotation;
 import org.junit.Test;
 
 import org.springframework.beans.factory.parsing.BeanDefinitionParsingException;
+import org.springframework.context.annotation2.DBTable;
+import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
+import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.tests.sample.beans.TestBean;
 
 import static org.junit.Assert.*;
@@ -68,6 +72,30 @@ public abstract class AbstractCircularImportDetectionTests {
 		assertTrue(threw);
 	}
 
+
+	/**
+	 * 读取自定义注解
+	 * @throws Exception
+	 */
+
+	@Test
+	public void customAnnotationTest() throws Exception {
+		boolean threw = false;
+		try {
+			CachingMetadataReaderFactory readerFactory = new  CachingMetadataReaderFactory();
+			MetadataReader reader = readerFactory.getMetadataReader(Z3.class.getName());
+			AnnotationMetadata annotationMetadata = reader.getAnnotationMetadata();
+			newParser().parse(loadAsConfigurationSource(Z3.class), "Z3");
+		}
+		catch (BeanDefinitionParsingException ex) {
+			assertTrue("Wrong message. Got: " + ex.getMessage(),
+					ex.getMessage().contains(
+							"Illegal attempt by @Configuration class 'AbstractCircularImportDetectionTests.Z2' " +
+									"to import class 'AbstractCircularImportDetectionTests.Z'"));
+			threw = true;
+		}
+		assertTrue(threw);
+	}
 
 	@Configuration
 	@Import(B.class)
@@ -136,6 +164,16 @@ public abstract class AbstractCircularImportDetectionTests {
 	@Configuration
 	@Import(Z.class)
 	class Z2 {
+
+		@Bean
+		TestBean z2() {
+			return new TestBean();
+		}
+	}
+
+	@Configuration
+	@DBTable
+	class Z3 {
 
 		@Bean
 		TestBean z2() {

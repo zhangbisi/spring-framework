@@ -14,7 +14,10 @@ import org.springframework.context.annotation.Import;
  * @create : 2018-12-24 9:31
  * @description :
  * 给容器中注册组件：
- * @
+ * @Import 三种用法
+ * 1、直接导入bean
+ * 2、实现 ImportBeanDefinitionRegistrar 接口导入
+ * 3、实现 ImportSelector 接口导入
  *
  */
 @Configuration
